@@ -13,9 +13,7 @@ async def register(
     user_credentials: UserCreateSchema,
     session: Annotated[AsyncSession, Depends(get_async_session)],
 ):
-    return await UserDAO.create_instance(
-        session=session, **user_credentials.model_dump()
-    )
+    return await UserDAO.create(session=session, **user_credentials.model_dump())
 
 
 @router.post("/update")

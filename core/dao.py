@@ -1,3 +1,6 @@
+from typing import Optional
+from uuid import UUID
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import Base
 
@@ -13,7 +16,7 @@ class BaseDAO:
             raise TypeError("The attribute model must be a subclass of the Base")
 
     @classmethod
-    async def create_instance(cls, session: AsyncSession, **kwargs):
+    async def create(cls, session: AsyncSession, **kwargs) -> model:
         instance = cls.model(**kwargs)
         session.add(instance)
         await session.commit()
@@ -21,7 +24,5 @@ class BaseDAO:
         return instance
 
     @classmethod
-    async def update_instance(cls, session: AsyncSession, **kwargs):
-        instance = await session.get(cls.model, kwargs.get("id"))
-        instance.username = kwargs.get("username")
-        await session.commit()
+    async def get(cls, session: AsyncSession, id_: int | UUID) -> Optional[model]:
+        return await session.get(cls.model, id_)

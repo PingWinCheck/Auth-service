@@ -9,6 +9,7 @@ from fastapi_users import FastAPIUsers
 from auth.schemas import UserRead, UserCreate, UserUpdate
 from auth.utils import auth_backend
 from core.dependencies import get_user_manager
+from custom_auth.routers import router as router_custom_auth
 
 fastapi_users = FastAPIUsers[User, UUID](get_user_manager, [auth_backend])
 
@@ -35,6 +36,8 @@ app.include_router(
     prefix="/users",
     tags=["users"],
 )
+
+app.include_router(router_custom_auth, prefix="/v2", tags=["auth"])
 
 
 def main():
