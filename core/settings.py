@@ -13,5 +13,7 @@ class Settings(BaseSettings):
     db_host: str
     db_port: int
 
+    jwt_secret: str
+
 
 settings = Settings()

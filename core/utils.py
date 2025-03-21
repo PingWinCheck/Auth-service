@@ -1,4 +1,9 @@
 def camel_case_to_snake_case(input_str: str) -> str:
+    """
+    Example: CamelCaseHTTPClass -> camel_case_http_class
+    :param input_str:
+    :return:
+    """
     if not isinstance(input_str, str):
         raise TypeError(f"Expected an str, got {type(input_str).__name__} instead")
     if not input_str:
