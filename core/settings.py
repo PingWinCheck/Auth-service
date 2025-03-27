@@ -15,5 +15,13 @@ class Settings(BaseSettings):
 
     jwt_secret: str
 
+    mongo_user: str
+    mongo_password: str
+    mongo_host: str
+    mongo_port: int
+
+    kafka_host: str
+    kafka_port: int
+
 
 settings = Settings()

@@ -1,4 +1,5 @@
 from uuid import UUID
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 import uvicorn
@@ -8,12 +9,26 @@ from fastapi_users import FastAPIUsers
 
 from auth.schemas import UserRead, UserCreate, UserUpdate
 from auth.utils import auth_backend
+from core.database_mongo import connection_mongo
 from core.dependencies import get_user_manager
+from custom_auth.documents import UserDoc
 from custom_auth.routers import router as router_custom_auth
 
 fastapi_users = FastAPIUsers[User, UUID](get_user_manager, [auth_backend])
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await connection_mongo(UserDoc)
+    yield
+
+
+app = FastAPI(
+    title="FastAPI AUTH",
+    summary="Service authenticated",
+    description="Service authenticated and authorized. Used JWT Header.",
+    lifespan=lifespan,
+)
 # app.include_router(router_auth)
 app.include_router(
     fastapi_users.get_register_router(UserRead, UserCreate),

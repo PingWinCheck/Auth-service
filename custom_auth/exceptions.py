@@ -2,5 +2,9 @@ class CustomAuthException(Exception):
     pass
 
 
-class UserAlreadyExists(CustomAuthException):
+class UserAlreadyExistsException(CustomAuthException):
+    pass
+
+
+class TokenInvalidException(CustomAuthException):
     pass
