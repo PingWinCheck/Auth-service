@@ -46,7 +46,7 @@ async def register(
     return JSONResponse(status_code=status.HTTP_201_CREATED, content=response)
 
 
-@router.post(
+@router.get(
     "/verify",
     response_model=UserBaseSchema,
     responses={
