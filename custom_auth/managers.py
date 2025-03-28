@@ -3,6 +3,7 @@ import secrets
 from pwdlib import PasswordHash
 from typing import TYPE_CHECKING, Type
 
+from core.kafka_producer import kafka_producer, ConfirmMail
 from custom_auth.documents import UserDoc
 from custom_auth.exceptions import UserAlreadyExistsException, TokenInvalidException
 
@@ -29,6 +30,8 @@ class UserManager:
 
         kwargs["token"] = secrets.token_urlsafe(64)
         user_doc = await UserDoc(**kwargs).insert()
+        confirm_mail = ConfirmMail.model_validate(user_doc.model_dump())
+        await kafka_producer(topic="send-mail", send_message_model=confirm_mail)
 
         # user = await self._dao.create(session=self._session, **kwargs)
         return user_doc
