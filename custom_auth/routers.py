@@ -1,8 +1,9 @@
 from fastapi import HTTPException, status
 
 from fastapi import APIRouter, Depends
-from fastapi.responses import JSONResponse
+
 from typing import Annotated
+
 
 from core.schemas import BadResponse
 from custom_auth.exceptions import UserAlreadyExistsException, TokenInvalidException
@@ -15,11 +16,17 @@ router = APIRouter()
 
 @router.post(
     "/register",
-    response_model=UserBaseSchema,
     status_code=201,
     responses={
         201: {
-            "model": UserBaseSchema,
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "При успешной регистрации будет отправлено письмо \
+с подтверждением на указанную почту"
+                    }
+                }
+            },
             "description": "При успешной регистрации будет отправлено письмо с подтверждением на указанную почту",
         },
         409: {
@@ -35,15 +42,15 @@ async def register(
     user_manager: Annotated[UserManager, Depends(get_user_manager)],
 ):
     try:
-        new_user = await user_manager.create(**user.model_dump())
+        await user_manager.create(**user.model_dump())
     except UserAlreadyExistsException:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="User already exists"
         )
 
-    # return new_user
-    response = UserBaseSchema.model_validate(new_user.model_dump()).model_dump()
-    return JSONResponse(status_code=status.HTTP_201_CREATED, content=response)
+    return {
+        "content": "Для продолжения регистрации следуйте инструкциям из письма отправленого к вам на почту"
+    }
 
 
 @router.get(
