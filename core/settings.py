@@ -23,5 +23,11 @@ class Settings(BaseSettings):
     kafka_host: str
     kafka_port: int
 
+    db_name_test: str
+    db_user_test: str
+    db_password_test: str
+    db_host_test: str
+    db_port_test: int
+
 
 settings = Settings()
