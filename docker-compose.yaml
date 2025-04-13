@@ -57,3 +57,15 @@ services:
 #      KAFKA_NUM_PARTITIONS: 3
     ports:
       - 9092:9092
+
+  db-test:
+    container_name: db-test
+    image: postgres:latest
+    ports:
+      - 5433:5432
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD_TEST}
+      POSTGRES_USER: ${DB_USER_TEST}
+      POSTGRES_DB: ${DB_NAME_TEST}
+    profiles:
+      - dev
