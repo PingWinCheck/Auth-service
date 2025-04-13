@@ -9,10 +9,15 @@ from alembic import context
 from core.database import Base, URL
 from auth.models import User # noqa
 from custom_auth.models import CustomUser # noqa
+from tests.conftest import TEST_URL_DB
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-config.set_main_option("sqlalchemy.url", URL)
+if config.get_main_option('test', 'False') == 'False':
+    config.set_main_option("sqlalchemy.url", URL)
+else:
+    config.set_main_option("sqlalchemy.url", TEST_URL_DB)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
