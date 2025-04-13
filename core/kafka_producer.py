@@ -2,7 +2,7 @@ from aiokafka import AIOKafkaProducer
 from pydantic import BaseModel, EmailStr
 from core.settings import settings
 
-URL = f"{settings.kafka_host}:{settings.kafka_port}"
+URL = f"{settings.kafka.host}:{settings.kafka.port}"
 
 
 class ConfirmMail(BaseModel):

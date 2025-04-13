@@ -8,7 +8,7 @@ from core.settings import settings
 from core.utils import camel_case_to_snake_case
 
 
-URL = f"postgresql+asyncpg://{settings.db_user}:{settings.db_password}@{settings.db_host}:{settings.db_port}/{settings.db_name}"
+URL = f"postgresql+asyncpg://{settings.db.user}:{settings.db.password}@{settings.db.host}:{settings.db.port}/{settings.db.name}"
 
 async_engine = create_async_engine(url=URL)
 

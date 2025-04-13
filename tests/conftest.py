@@ -11,7 +11,7 @@ from alembic import command
 
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
-TEST_URL_DB = f"postgresql+asyncpg://{settings.db_user_test}:{settings.db_password_test}@{settings.db_host_test}:{settings.db_port_test}/{settings.db_name_test}"
+TEST_URL_DB = f"postgresql+asyncpg://{settings.db_test.user}:{settings.db_test.password}@{settings.db_test.host}:{settings.db_test.port}/{settings.db_test.name}"
 
 
 @pytest.fixture(scope="session")

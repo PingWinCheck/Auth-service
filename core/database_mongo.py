@@ -2,7 +2,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from core.settings import settings
 from beanie import init_beanie
 
-URL = f"mongodb://{settings.mongo_user}:{settings.mongo_password}@{settings.mongo_host}:{settings.mongo_port}"
+URL = f"mongodb://{settings.mongo.user}:{settings.mongo.password}@{settings.mongo.host}:{settings.mongo.port}"
 
 
 async def connection_mongo(*models) -> None:
