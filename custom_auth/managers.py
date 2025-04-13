@@ -20,6 +20,14 @@ class UserManager:
         self._dao = dao
 
     async def create(self, **kwargs) -> UserDoc | None:
+        """
+        Проверяет наличие пользователя в postgres, если уже существует, выбрасывает исключение UserAlreadyExistsException.
+        Хэширует password, генерирует токен.
+        Сохраняет результат в mongo.
+        Отправляет в kafka для дальнейшей обработки.
+        :param kwargs:
+        :return:
+        """
         user = await self._dao.get_by_email(
             session=self._session, email=kwargs["email"]
         )
@@ -37,9 +45,17 @@ class UserManager:
         return user_doc
 
     async def verify_email_create_user(self, token: str):
+        """
+        поиск в mongo пользователя по токену, если токен не найден выбрасывает исключение TokenInvalidException.
+        если токен найден, проверяем существует ли такой пользователь в основной бд, если нет, то создаем нового пользователя
+        иначе выбрасываем исключение UserAlreadyExistsException
+        удаляем запись из mongo с текущим токеном
+        :param token:
+        :return:
+        """
         user_doc = await UserDoc.find_one({"token": token})
         if user_doc is None:
-            raise TokenInvalidException
+            raise TokenInvalidException("Token invalid")
         dump = user_doc.model_dump()
         dump.pop("token", None)
         dump.pop("id", None)
