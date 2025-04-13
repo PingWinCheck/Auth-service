@@ -19,8 +19,11 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "faker>=37.1.0",
+    "httpx>=0.28.1",
     "pre-commit>=4.1.0",
     "pytest>=8.3.5",
+    "pytest-asyncio>=0.26.0",
     "ruff>=0.11.0",
 ]
 
@@ -29,3 +32,5 @@ exclude = ["env.py", "volume"]
 
 [tool.pytest.ini_options]
 addopts = "--ignore=volume"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
