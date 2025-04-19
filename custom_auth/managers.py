@@ -6,6 +6,9 @@ from typing import TYPE_CHECKING, Type
 from core.kafka_producer import kafka_producer, ConfirmMail
 from custom_auth.documents import UserDoc
 from custom_auth.exceptions import UserAlreadyExistsException, TokenInvalidException
+from core.logger import get_logger
+
+log = get_logger(__name__)
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -64,4 +67,5 @@ class UserManager:
             raise UserAlreadyExistsException
         user = await self._dao.create(session=self._session, **dump)
         await user_doc.delete()
+        log.info("User verified email: %r and created db", dump["email"])
         return user

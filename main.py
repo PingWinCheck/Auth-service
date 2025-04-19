@@ -13,14 +13,18 @@ from core.database_mongo import connection_mongo
 from core.dependencies import get_user_manager
 from custom_auth.documents import UserDoc
 from custom_auth.routers import router as router_custom_auth
+from core.logger import get_logger
 
 fastapi_users = FastAPIUsers[User, UUID](get_user_manager, [auth_backend])
+log = get_logger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    log.info("Start lifespan FastAPI")
     await connection_mongo(UserDoc)
     yield
+    log.info("Stop lifespan FastAPI")
 
 
 app = FastAPI(
