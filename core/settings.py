@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=Path(__file__).resolve().parent.parent / ".env",
         extra="allow",
-        env_nested_delimiter=".",
+        env_nested_delimiter="__",
     )
 
     db: DB
