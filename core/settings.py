@@ -22,6 +22,12 @@ class Kafka(BaseModel):
     host: str
     port: int
 
+class Jwt(BaseModel):
+    private_key: str
+    public_key: str
+    expire_access_token_seconds: int
+    expire_refresh_token_seconds: int
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -34,6 +40,7 @@ class Settings(BaseSettings):
     db_test: DB
     mongo: Mongo
     kafka: Kafka
+    jwt: Jwt
 
     jwt_secret: str
 
