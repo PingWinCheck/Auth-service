@@ -9,3 +9,9 @@ class UserBaseSchema(BaseModel):
 
 class UserCreateSchema(UserBaseSchema):
     password: Annotated[str, Field(min_length=8)]
+
+
+class Token(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = 'Bearer'
