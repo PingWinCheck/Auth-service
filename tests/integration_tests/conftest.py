@@ -4,6 +4,8 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 from core.dependencies import get_async_session
+from custom_auth import CustomUser
+from custom_auth.managers import password_manager
 from main import app, lifespan
 from tests.conftest import TEST_URL_DB
 
@@ -31,4 +33,18 @@ async def override_session():
     async_session = async_sessionmaker(async_engine, expire_on_commit=False)
     async with async_session() as session:
         yield session
+
+
 app.dependency_overrides[get_async_session] = override_session
+
+
+@pytest.fixture
+async def user(session):
+    user = CustomUser(
+        email="qwe@asd.zxc", password_hash=password_manager.hash("fakeFake")
+    )
+    session.add(user)
+    await session.commit()
+    yield user
+    await session.delete(user)
+    await session.commit()

@@ -79,3 +79,31 @@ class TestRegister:
         assert response.json() == {
             "content": "Для продолжения регистрации следуйте инструкциям из письма отправленого к вам на почту"
         }
+
+
+class TestLogin:
+    async def test_login(self, client, user):
+        response = await client.post(
+            "/v2/login", json={"email": user.email, "password": "fakeFake"}
+        )
+        assert response.status_code == 200
+        assert "access_token" in response.json()
+        assert "refresh_token" in response.json()
+        assert "token_type" in response.json()
+
+    @pytest.mark.parametrize(
+        "email, password, response_status, response_json",
+        [
+            ("1qwe@asd.zxc", "1fakeFake", 403, {"detail": "Invalid login or password"}),
+            ("1qwe@asd.zxc", "fakeFake", 403, {"detail": "Invalid login or password"}),
+            ("qwe@asd.zxc", "fakeFake1", 403, {"detail": "Invalid login or password"}),
+        ],
+    )
+    async def test_login_incorrect(
+        self, client, user, email, password, response_status, response_json
+    ):
+        response = await client.post(
+            "/v2/login", json={"email": email, "password": password}
+        )
+        assert response.status_code == response_status
+        assert response.json() == response_json
