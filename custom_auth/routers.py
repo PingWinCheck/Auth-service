@@ -6,10 +6,19 @@ from typing import Annotated
 
 
 from core.schemas import BadResponse
-from custom_auth.exceptions import UserAlreadyExistsException, TokenInvalidException
+from custom_auth.exceptions import (
+    UserAlreadyExistsException,
+    TokenInvalidException,
+    InvalidLoginOrPassword,
+)
 from custom_auth.managers import UserManager
 from custom_auth.dependencies import get_user_manager
-from custom_auth.schemas import UserCreateSchema, UserBaseSchema
+from custom_auth.schemas import (
+    UserCreateSchema,
+    UserBaseSchema,
+    UserLoginSchema,
+    TokenSchema,
+)
 
 router = APIRouter()
 
@@ -90,3 +99,30 @@ async def verify(
             status_code=status.HTTP_409_CONFLICT, detail="User already exists"
         )
     return user
+
+
+@router.post(
+    "/login",
+    response_model=TokenSchema,
+    responses={
+        403: {
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Invalid login or password"},
+                    "schema": BadResponse.model_json_schema(),
+                }
+            }
+        },
+    },
+)
+async def login(
+    credentials: UserLoginSchema,
+    user_manager: Annotated[UserManager, Depends(get_user_manager)],
+):
+    try:
+        token = await user_manager.login(credentials=credentials)
+    except InvalidLoginOrPassword:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Invalid login or password"
+        )
+    return token

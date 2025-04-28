@@ -5,8 +5,14 @@ from typing import TYPE_CHECKING, Type
 
 from core.kafka_producer import kafka_producer, ConfirmMail
 from custom_auth.documents import UserDoc
-from custom_auth.exceptions import UserAlreadyExistsException, TokenInvalidException
+from custom_auth.exceptions import (
+    UserAlreadyExistsException,
+    TokenInvalidException,
+    InvalidLoginOrPassword,
+)
 from core.logger import get_logger
+from custom_auth.schemas import TokenSchema, UserLoginSchema
+from custom_auth.utils import TokenGenerator
 
 log = get_logger(__name__)
 
@@ -69,3 +75,12 @@ class UserManager:
         await user_doc.delete()
         log.info("User verified email: %r and created db", dump["email"])
         return user
+
+    async def login(self, credentials: UserLoginSchema) -> TokenSchema:
+        user = await self._dao.get_by_email(self._session, credentials.email)
+        if user is None:
+            raise InvalidLoginOrPassword
+        if not password_manager.verify(credentials.password, user.password_hash):
+            raise InvalidLoginOrPassword
+        payload = {"sub": str(user.id), "email": user.email}
+        return TokenGenerator().create_access_refresh_tokens_pair(payload)

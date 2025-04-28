@@ -8,3 +8,7 @@ class UserAlreadyExistsException(CustomAuthException):
 
 class TokenInvalidException(CustomAuthException):
     pass
+
+
+class InvalidLoginOrPassword(CustomAuthException):
+    pass
