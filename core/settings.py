@@ -22,11 +22,17 @@ class Kafka(BaseModel):
     host: str
     port: int
 
+
 class Jwt(BaseModel):
     private_key: str
     public_key: str
     expire_access_token_seconds: int
     expire_refresh_token_seconds: int
+
+
+class Redis(BaseModel):
+    host: str
+    port: int
 
 
 class Settings(BaseSettings):
@@ -41,6 +47,7 @@ class Settings(BaseSettings):
     mongo: Mongo
     kafka: Kafka
     jwt: Jwt
+    redis: Redis
 
     jwt_secret: str
 
