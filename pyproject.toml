@@ -13,6 +13,7 @@ dependencies = [
     "fastapi>=0.115.11",
     "fastapi-users[sqlalchemy]>=14.0.1",
     "pydantic-settings>=2.8.1",
+    "redis>=6.0.0",
     "sqlalchemy[asyncio]>=2.0.39",
     "uvicorn>=0.34.0",
 ]
