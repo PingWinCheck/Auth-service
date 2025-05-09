@@ -69,3 +69,9 @@ services:
       POSTGRES_DB: ${DB_TEST__NAME}
     profiles:
       - dev
+
+  redis:
+    container_name: redis
+    image: redis:latest
+    ports:
+      - 6379:6379
