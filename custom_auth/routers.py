@@ -1,4 +1,4 @@
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Form
 
 from fastapi import APIRouter, Depends
 
@@ -9,7 +9,8 @@ from core.schemas import BadResponse
 from custom_auth.exceptions import (
     UserAlreadyExistsException,
     TokenInvalidException,
-    InvalidLoginOrPassword,
+    InvalidLoginOrPasswordException,
+    UserDoesNotExistsException,
 )
 from custom_auth.managers import UserManager
 from custom_auth.dependencies import get_user_manager
@@ -121,8 +122,40 @@ async def login(
 ):
     try:
         token = await user_manager.login(credentials=credentials)
-    except InvalidLoginOrPassword:
+    except InvalidLoginOrPasswordException:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Invalid login or password"
         )
     return token
+
+
+@router.patch("/change_password")
+async def change_password(
+    email: UserBaseSchema,
+    user_manager: Annotated[UserManager, Depends(get_user_manager)],
+):
+    try:
+        token = await user_manager.reset_password(email)
+    except UserDoesNotExistsException as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return {
+        "detail": "Письмо для сброса пароля отправлено на вашу почту",
+        "token": token,
+    }
+
+
+@router.get("/reset_password")
+async def reset_password_token(
+    token: str, user_manager: Annotated[UserManager, Depends(get_user_manager)]
+):
+    return await user_manager.reset_password_with_token(token)
+
+
+@router.patch("/reset_password", response_model=UserBaseSchema)
+async def reset_password(
+    token: str,
+    password: Annotated[str, Form()],
+    user_manager: Annotated[UserManager, Depends(get_user_manager)],
+):
+    user = await user_manager.reset_password_with_token_new_password(token, password)
+    return user

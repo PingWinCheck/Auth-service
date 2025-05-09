@@ -10,5 +10,9 @@ class TokenInvalidException(CustomAuthException):
     pass
 
 
-class InvalidLoginOrPassword(CustomAuthException):
+class InvalidLoginOrPasswordException(CustomAuthException):
+    pass
+
+
+class UserDoesNotExistsException(CustomAuthException):
     pass

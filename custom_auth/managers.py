@@ -1,17 +1,21 @@
 import secrets
+from datetime import timedelta
 
 from pwdlib import PasswordHash
 from typing import TYPE_CHECKING, Type
 
 from core.kafka_producer import kafka_producer, ConfirmMail
+from core.redis_con import redis
+from custom_auth import CustomUser
 from custom_auth.documents import UserDoc
 from custom_auth.exceptions import (
     UserAlreadyExistsException,
     TokenInvalidException,
-    InvalidLoginOrPassword,
+    InvalidLoginOrPasswordException,
+    UserDoesNotExistsException,
 )
 from core.logger import get_logger
-from custom_auth.schemas import TokenSchema, UserLoginSchema
+from custom_auth.schemas import TokenSchema, UserLoginSchema, UserBaseSchema
 from custom_auth.utils import TokenGenerator
 
 log = get_logger(__name__)
@@ -79,8 +83,37 @@ class UserManager:
     async def login(self, credentials: UserLoginSchema) -> TokenSchema:
         user = await self._dao.get_by_email(self._session, credentials.email)
         if user is None:
-            raise InvalidLoginOrPassword
+            raise InvalidLoginOrPasswordException
         if not password_manager.verify(credentials.password, user.password_hash):
-            raise InvalidLoginOrPassword
+            raise InvalidLoginOrPasswordException
         payload = {"sub": str(user.id), "email": user.email}
         return TokenGenerator().create_access_refresh_tokens_pair(payload)
+
+    async def reset_password(self, credentials: UserBaseSchema):
+        user = await self._dao.get_by_email(self._session, credentials.email)
+        if user is None:
+            raise UserDoesNotExistsException(
+                f"Пользователя с почтой: {credentials.email} не существует"
+            )
+        token = secrets.token_urlsafe(64)
+        await redis.set(token, credentials.email, ex=timedelta(minutes=15))
+        return token
+
+    async def reset_password_with_token(self, token: str) -> str:
+        email = await redis.get(token)
+        if email is None:
+            raise TokenInvalidException("Указанный токен не существует, либо истёк")
+        return email
+
+    async def reset_password_with_token_new_password(
+        self, token: str, password: str
+    ) -> CustomUser:
+        email = await self.reset_password_with_token(token=token)
+        user = await self._dao.get_by_email(session=self._session, email=email)
+        if user is None:
+            raise UserDoesNotExistsException("Пользователя не существует")
+        user.password_hash = password_manager.hash(password)
+        await self._session.commit()
+        await self._session.refresh(user)
+        await redis.delete(token)
+        return user
