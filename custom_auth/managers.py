@@ -78,18 +78,25 @@ class UserManager:
         :param token:
         :return:
         """
-        user_doc = await UserDoc.find_one({"token": token})
-        if user_doc is None:
+        # TODO zamena mongo na redis
+        response_redis = await redis.get(f"token:{token}")
+        if response_redis is None:
             raise TokenInvalidException("Token invalid")
-        dump = user_doc.model_dump()
-        dump.pop("token", None)
-        dump.pop("id", None)
-        user = await self._dao.get_by_email(session=self._session, email=dump["email"])
+        user_json = UserDBCreateSchema.model_validate_json(response_redis)
+        log.info("Получили пользователя из редис по токену")
+        user = await self._dao.get_by_email(
+            session=self._session, email=user_json.email
+        )
+        log.info(
+            "Проверяем существует ли уже пользователь с именем %s", user_json.email
+        )
         if user:
             raise UserAlreadyExistsException
-        user = await self._dao.create(session=self._session, **dump)
-        await user_doc.delete()
-        log.info("User verified email: %r and created db", dump["email"])
+        user = await self._dao.create(session=self._session, **user_json.model_dump())
+        log.info("Создали запись в бд с именем пользователя %s", user_json.email)
+        await redis.delete(f"token:{token}")
+        log.info("Очистили временного пользователя из редис")
+
         return user
 
     async def login(self, credentials: "OAuth2PasswordRequestForm") -> TokenSchema:
