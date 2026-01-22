@@ -1,6 +1,7 @@
 import secrets
 from datetime import timedelta
 
+
 from pwdlib import PasswordHash
 from typing import TYPE_CHECKING, Type
 
@@ -15,14 +16,21 @@ from custom_auth.exceptions import (
     UserDoesNotExistsException,
 )
 from core.logger import get_logger
-from custom_auth.schemas import TokenSchema, UserLoginSchema, UserBaseSchema
+from custom_auth.schemas import (
+    TokenSchema,
+    UserBaseSchema,
+    UserCreateSchema,
+    UserDBCreateSchema,
+)
 from custom_auth.utils import TokenGenerator
+from core.faststream import rabbit_router
 
 log = get_logger(__name__)
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
     from custom_auth.dao import CustomUserDAO
+    from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 
 password_manager = PasswordHash.recommended()
 
@@ -32,30 +40,34 @@ class UserManager:
         self._session = session
         self._dao = dao
 
-    async def create(self, **kwargs) -> UserDoc | None:
+    async def create(self, data: UserCreateSchema) -> UserDoc | None:
         """
         Проверяет наличие пользователя в postgres, если уже существует, выбрасывает исключение UserAlreadyExistsException.
         Хэширует password, генерирует токен.
         Сохраняет результат в mongo.
         Отправляет в kafka для дальнейшей обработки.
-        :param kwargs:
         :return:
         """
-        user = await self._dao.get_by_email(
-            session=self._session, email=kwargs["email"]
-        )
+        user = await self._dao.get_by_email(session=self._session, email=data.email)
         if user:
             raise UserAlreadyExistsException("Пользователь уже существует")
-        password = kwargs.pop("password")
-        kwargs["password_hash"] = password_manager.hash(password)
 
-        kwargs["token"] = secrets.token_urlsafe(64)
-        user_doc = await UserDoc(**kwargs).insert()
-        confirm_mail = ConfirmMail.model_validate(user_doc.model_dump())
-        await kafka_producer(topic="send-mail", send_message_model=confirm_mail)
+        password_hash = password_manager.hash(data.password)
 
-        # user = await self._dao.create(session=self._session, **kwargs)
-        return user_doc
+        token = secrets.token_urlsafe(64)
+        # TODO: zamena mongo na redis
+        await redis.set(
+            f"token:{token}",
+            UserDBCreateSchema(
+                email=data.email, password_hash=password_hash
+            ).model_dump_json(),
+            ex=600,
+        )
+        log.info("Временный пользователь %s создан в редис", data.email)
+        confirm_mail = ConfirmMail(email=data.email, token=token)
+        await rabbit_router.broker.publish(confirm_mail, queue="send-email")
+        log.info("Сообщение ушло к брокеру для дальнейшей обработки")
+        return user
 
     async def verify_email_create_user(self, token: str):
         """
@@ -80,8 +92,8 @@ class UserManager:
         log.info("User verified email: %r and created db", dump["email"])
         return user
 
-    async def login(self, credentials: UserLoginSchema) -> TokenSchema:
-        user = await self._dao.get_by_email(self._session, credentials.email)
+    async def login(self, credentials: "OAuth2PasswordRequestForm") -> TokenSchema:
+        user = await self._dao.get_by_email(self._session, credentials.username)
         if user is None:
             raise InvalidLoginOrPasswordException
         if not password_manager.verify(credentials.password, user.password_hash):
@@ -97,6 +109,11 @@ class UserManager:
             )
         token = secrets.token_urlsafe(64)
         await redis.set(token, credentials.email, ex=timedelta(minutes=15))
+
+        await kafka_producer(
+            "send-mail",
+            send_message_model=ConfirmMail(email=credentials.email, token=token),
+        )
         return token
 
     async def reset_password_with_token(self, token: str) -> str:

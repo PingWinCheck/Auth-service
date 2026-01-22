@@ -1,5 +1,5 @@
 from fastapi import HTTPException, status, Form
-
+from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 from fastapi import APIRouter, Depends
 
 from typing import Annotated
@@ -17,7 +17,6 @@ from custom_auth.dependencies import get_user_manager
 from custom_auth.schemas import (
     UserCreateSchema,
     UserBaseSchema,
-    UserLoginSchema,
     TokenSchema,
 )
 
@@ -52,7 +51,7 @@ async def register(
     user_manager: Annotated[UserManager, Depends(get_user_manager)],
 ):
     try:
-        await user_manager.create(**user.model_dump())
+        await user_manager.create(user)
     except UserAlreadyExistsException:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="User already exists"
@@ -117,7 +116,7 @@ async def verify(
     },
 )
 async def login(
-    credentials: UserLoginSchema,
+    credentials: Annotated[OAuth2PasswordRequestForm, Depends()],
     user_manager: Annotated[UserManager, Depends(get_user_manager)],
 ):
     try:
@@ -127,6 +126,11 @@ async def login(
             status_code=status.HTTP_403_FORBIDDEN, detail="Invalid login or password"
         )
     return token
+
+
+# TODO: Написать тесты на сброс пароля
+# TODO: ответ убрать токен
+# TODO: сделать отправку письма
 
 
 @router.patch("/change_password")
@@ -148,7 +152,10 @@ async def change_password(
 async def reset_password_token(
     token: str, user_manager: Annotated[UserManager, Depends(get_user_manager)]
 ):
-    return await user_manager.reset_password_with_token(token)
+    try:
+        return await user_manager.reset_password_with_token(token)
+    except TokenInvalidException as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.patch("/reset_password", response_model=UserBaseSchema)
@@ -157,5 +164,12 @@ async def reset_password(
     password: Annotated[str, Form()],
     user_manager: Annotated[UserManager, Depends(get_user_manager)],
 ):
-    user = await user_manager.reset_password_with_token_new_password(token, password)
+    try:
+        user = await user_manager.reset_password_with_token_new_password(
+            token, password
+        )
+    except TokenInvalidException as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except UserDoesNotExistsException as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     return user

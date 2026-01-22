@@ -11,6 +11,10 @@ class UserCreateSchema(UserBaseSchema):
     password: Annotated[str, Field(min_length=8)]
 
 
+class UserDBCreateSchema(UserBaseSchema):
+    password_hash: str
+
+
 class UserLoginSchema(UserBaseSchema):
     password: str
 

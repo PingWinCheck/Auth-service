@@ -35,6 +35,17 @@ class Redis(BaseModel):
     port: int
 
 
+class Rabbit(BaseModel):
+    user: str
+    password: str
+    port: int
+    host: str
+
+    @property
+    def url(self):
+        return f"amqp://{self.user}:{self.password}@{self.host}:{self.port}"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=Path(__file__).resolve().parent.parent / ".env",
@@ -48,6 +59,7 @@ class Settings(BaseSettings):
     kafka: Kafka
     jwt: Jwt
     redis: Redis
+    rabbit: Rabbit
 
     jwt_secret: str
 
