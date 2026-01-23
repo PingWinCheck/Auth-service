@@ -139,12 +139,11 @@ async def change_password(
     user_manager: Annotated[UserManager, Depends(get_user_manager)],
 ):
     try:
-        token = await user_manager.reset_password(email)
+        await user_manager.reset_password(email)
     except UserDoesNotExistsException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     return {
         "detail": "Письмо для сброса пароля отправлено на вашу почту",
-        "token": token,
     }
 
 

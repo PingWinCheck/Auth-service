@@ -60,7 +60,7 @@ services:
 
   db-test:
     container_name: db-test
-    image: postgres:latest
+    image: postgres:17-alpine
     ports:
       - "5433:5432"
     environment:

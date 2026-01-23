@@ -5,7 +5,7 @@ from datetime import timedelta
 from pwdlib import PasswordHash
 from typing import TYPE_CHECKING, Type
 
-from core.kafka_producer import kafka_producer, ConfirmMail
+from core.schemas import MailSchema
 from core.redis_con import redis
 from custom_auth import CustomUser
 from custom_auth.documents import UserDoc
@@ -64,8 +64,10 @@ class UserManager:
             ex=600,
         )
         log.info("Временный пользователь %s создан в редис", data.email)
-        confirm_mail = ConfirmMail(email=data.email, token=token)
-        await rabbit_router.broker.publish(confirm_mail, queue="send-email")
+        msg = f"""Для подтверждения почты перейдите по ссылке http://localhost:8000/v2/verify?token={token}"""
+        mail = MailSchema(email=data.email, msg=msg)
+        await rabbit_router.broker.publish(mail.model_dump_json(), queue="send-email")
+        # await email_publisher.publish(mail.model_dump_json())
         log.info("Сообщение ушло к брокеру для дальнейшей обработки")
         return user
 
@@ -115,16 +117,22 @@ class UserManager:
                 f"Пользователя с почтой: {credentials.email} не существует"
             )
         token = secrets.token_urlsafe(64)
-        await redis.set(token, credentials.email, ex=timedelta(minutes=15))
+        await redis.set(
+            f"token:reset-password:{token}", credentials.email, ex=timedelta(minutes=15)
+        )
 
-        await kafka_producer(
-            "send-mail",
-            send_message_model=ConfirmMail(email=credentials.email, token=token),
+        # await kafka_producer(
+        #     "send-mail",
+        #     send_message_model=ConfirmMail(email=credentials.email, token=token),
+        # )
+        msg = f"""Для сброса пароля перейдите по ссылке http://localhost:8000/v2/reset_password?token={token}"""
+        await rabbit_router.broker.publish(
+            MailSchema(email=credentials.email, msg=msg), queue="send-email"
         )
         return token
 
     async def reset_password_with_token(self, token: str) -> str:
-        email = await redis.get(token)
+        email = await redis.get(f"token:reset-password:{token}")
         if email is None:
             raise TokenInvalidException("Указанный токен не существует, либо истёк")
         return email
@@ -139,5 +147,5 @@ class UserManager:
         user.password_hash = password_manager.hash(password)
         await self._session.commit()
         await self._session.refresh(user)
-        await redis.delete(token)
+        await redis.delete(f"token:reset-password:{token}")
         return user

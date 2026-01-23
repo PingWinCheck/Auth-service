@@ -1,15 +1,10 @@
 from aiokafka import AIOKafkaProducer
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from core.settings import settings
 from core.logger import get_logger
 
 log = get_logger(__name__)
 URL = f"{settings.kafka.host}:{settings.kafka.port}"
-
-
-class ConfirmMail(BaseModel):
-    email: EmailStr
-    token: str
 
 
 async def kafka_producer(
