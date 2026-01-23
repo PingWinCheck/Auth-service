@@ -3,9 +3,8 @@ from uuid import UUID
 import pytest
 
 from custom_auth import CustomUser
-from custom_auth.documents import UserDoc
 from custom_auth.exceptions import TokenInvalidException, UserAlreadyExistsException
-
+from pytest_mock import MockerFixture
 
 user = CustomUser(
     email="qwe@asd.zxc",
@@ -47,45 +46,77 @@ class TestVerify:
         assert response.json() == js
 
 
-class TestRegister:
+# class TestRegister:
+#     user = {"email": "test@example.com", "password": "fake2password"}
+#
+#     @staticmethod
+#     @pytest.fixture()
+#     def mock_kafka(monkeypatch):
+#         async def mock_producer_kafka(*args, **kwargs):
+#             pass
+#
+#         monkeypatch.setattr("custom_auth.managers.kafka_producer", mock_producer_kafka)
+#         return mock_producer_kafka
+#
+#     @staticmethod
+#     @pytest.fixture()
+#     def mock_user_doc(monkeypatch):
+#         class MockUserDoc:
+#             def __init__(self, *args, **kwargs):
+#                 self.args = (args,)
+#                 self.kwargs = kwargs
+#
+#             async def insert(self, *args, **kwargs):
+#                 return UserDoc(**self.kwargs)
+#
+#         monkeypatch.setattr("custom_auth.managers.UserDoc", MockUserDoc)
+#         return MockUserDoc
+#
+#     async def test_register(self, client, mock_kafka, mock_user_doc):
+#         response = await client.post("/v2/register", json=self.user)
+#         assert response.status_code == 201
+#         assert response.json() == {
+#             "content": "Для продолжения регистрации следуйте инструкциям из письма отправленого к вам на почту"
+#         }
+
+
+class TestRegisterV2:
     user = {"email": "test@example.com", "password": "fake2password"}
 
-    @staticmethod
-    @pytest.fixture()
-    def mock_kafka(monkeypatch):
-        async def mock_producer_kafka(*args, **kwargs):
-            pass
+    async def test_register(self, client, mocker: MockerFixture, mock_rabbit):
+        # from faststream.rabbit import TestRabbitBroker
+        # from core.faststream import rabbit_router
+        # async with TestRabbitBroker(rabbit_router.broker):
+        #     response = await client.post('/v2/register', json=self.user)
+        #     assert response.status_code == 201
 
-        monkeypatch.setattr("custom_auth.managers.kafka_producer", mock_producer_kafka)
-        return mock_producer_kafka
+        # mock = mocker.patch.object(rabbit_router.broker, "publish")
+        # mock.return_value = None
+        # from custom_auth.managers import redis
+        from unittest.mock import AsyncMock
 
-    @staticmethod
-    @pytest.fixture()
-    def mock_user_doc(monkeypatch):
-        class MockUserDoc:
-            def __init__(self, *args, **kwargs):
-                self.args = (args,)
-                self.kwargs = kwargs
+        # mock_redis = mocker.patch.object(redis, 'set', new_callable=AsyncMock)
+        mock_redis = AsyncMock()
+        mocker.patch("custom_auth.managers.redis", mock_redis)
 
-            async def insert(self, *args, **kwargs):
-                return UserDoc(**self.kwargs)
-
-        monkeypatch.setattr("custom_auth.managers.UserDoc", MockUserDoc)
-        return MockUserDoc
-
-    async def test_register(self, client, mock_kafka, mock_user_doc):
         response = await client.post("/v2/register", json=self.user)
+        mock_redis.set.assert_awaited_once()
+        args, kwargs = mock_redis.set.call_args
         assert response.status_code == 201
         assert response.json() == {
             "content": "Для продолжения регистрации следуйте инструкциям из письма отправленого к вам на почту"
         }
+        assert "token:" in args[0]
+        assert f'"email":"{self.user["email"]}"' in args[1]
+        assert kwargs["ex"] == 600
 
 
 class TestLogin:
     async def test_login(self, client, user):
         response = await client.post(
-            "/v2/login", json={"email": user.email, "password": "fakeFake"}
+            "/v2/login", data={"username": user.email, "password": "fakeFake"}
         )
+
         assert response.status_code == 200
         assert "access_token" in response.json()
         assert "refresh_token" in response.json()
@@ -103,7 +134,7 @@ class TestLogin:
         self, client, user, email, password, response_status, response_json
     ):
         response = await client.post(
-            "/v2/login", json={"email": email, "password": password}
+            "/v2/login", data={"username": email, "password": password}
         )
         assert response.status_code == response_status
         assert response.json() == response_json

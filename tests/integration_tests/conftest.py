@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from core.dependencies import get_async_session
 from custom_auth import CustomUser
 from custom_auth.managers import password_manager
-from main import app, lifespan
+from main import app
 from tests.conftest import TEST_URL_DB
 
 
@@ -14,14 +14,14 @@ from tests.conftest import TEST_URL_DB
 # @pytest.fixture(scope='session')
 
 
-@pytest.fixture(scope="session")
-async def lifespan_():
-    async with lifespan(app):
-        pass
+# @pytest.fixture(scope="session")
+# async def lifespan_():
+#     async with lifespan(app):
+#         pass
 
 
 @pytest.fixture(scope="session")
-async def client(lifespan_):
+async def client():
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as async_client:
@@ -48,3 +48,12 @@ async def user(session):
     yield user
     await session.delete(user)
     await session.commit()
+
+
+@pytest.fixture()
+async def mock_rabbit():
+    from faststream.rabbit import TestRabbitBroker
+    from core.faststream import rabbit_router
+
+    async with TestRabbitBroker(rabbit_router.broker) as br:
+        yield br
