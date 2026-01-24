@@ -6,5 +6,6 @@ class BadResponse(BaseModel):
 
 
 class MailSchema(BaseModel):
-    email: EmailStr
+    recipient: EmailStr
     msg: str
+    subject: str

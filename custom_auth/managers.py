@@ -65,7 +65,9 @@ class UserManager:
         )
         log.info("Временный пользователь %s создан в редис", data.email)
         msg = f"""Для подтверждения почты перейдите по ссылке http://localhost:8000/v2/verify?token={token}"""
-        mail = MailSchema(email=data.email, msg=msg)
+        mail = MailSchema(
+            recipient=data.email, msg=msg, subject="Подтверждение аккаунта"
+        )
         await rabbit_router.broker.publish(mail.model_dump_json(), queue="send-email")
         # await email_publisher.publish(mail.model_dump_json())
         log.info("Сообщение ушло к брокеру для дальнейшей обработки")
@@ -127,7 +129,8 @@ class UserManager:
         # )
         msg = f"""Для сброса пароля перейдите по ссылке http://localhost:8000/v2/reset_password?token={token}"""
         await rabbit_router.broker.publish(
-            MailSchema(email=credentials.email, msg=msg), queue="send-email"
+            MailSchema(recipient=credentials.email, msg=msg, subject="Сброс пароля"),
+            queue="send-email",
         )
         return token
 
