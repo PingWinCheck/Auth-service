@@ -1,2 +1,4 @@
 .env
-./tests
+tests
+volume
+.venv

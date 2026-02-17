@@ -68,7 +68,13 @@ class UserManager:
         mail = MailSchema(
             recipient=data.email, msg=msg, subject="Подтверждение аккаунта"
         )
-        await rabbit_router.broker.publish(mail.model_dump_json(), queue="send-email")
+        await rabbit_router.broker.publish(
+            mail,
+            queue="send-email",
+            persist=True,
+            # headers={'x-dead-letter-exchange': 'DLQ-EX',
+            #                                    'x-dead-letter-routing-key': 'dlq'}
+        )
         # await email_publisher.publish(mail.model_dump_json())
         log.info("Сообщение ушло к брокеру для дальнейшей обработки")
         return user

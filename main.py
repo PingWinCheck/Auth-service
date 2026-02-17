@@ -71,6 +71,11 @@ app.add_middleware(
 )
 
 
+@app.get("/health-check", include_in_schema=True)
+async def health_check():
+    return {"status": "ok"}
+
+
 def main():
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
 
